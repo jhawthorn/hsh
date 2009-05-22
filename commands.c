@@ -1,132 +1,86 @@
 
+#include <unistd.h>
+#include <sys/wait.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-#include "dir.h"
 #include "commands.h"
 
-/* Used by basename and dirname to split a path */
-static int dirnameidx(char *s){
-	int i = strlen(s) - 1;
-	for(; i >= 0 && s[i] == '/'; i--); /* Ignore trailing slashes*/
-	for(; i >= 0 && s[i] != '/'; i--);
-	return i;
-}
+struct bgtask_t{
+  struct bgtask_t *next;
+  char *name;
+  int pid;
+};
 
-/* basename - Finds the last segment of a path */
-static char *basename(char *s){
-	return strdup(&s[dirnameidx(s) + 1]);
-}
-
-/* dirname - Finds all but the last segment of a path */
-static char *dirname(char *s){
-	int i = dirnameidx(s);
-	if(i < 0){
-		return ".";
-	}else{
-		char *ret = malloc(i + 2);
-		memcpy(ret, s, i + 1);
-		ret[i+1] = 0;
-		return ret;
-	}
-}
-
-/* mkdir - creates a new directory */
-static void mkdir(int argc, char *argv[]){
-	if(argc < 2){
-		fprintf(stderr, "%s: missing operand\n", argv[0]);
-	}else{
-		int i;
-		for(i = 1 ; i < argc; i++){
-			if(dir_getdir(current, argv[1])){
-				fprintf(stderr, "%s: cannot create directory '%s': File exists\n", argv[0], argv[i]);
-			}else{
-				char *dn = dirname(argv[i]);
-				char *bn = basename(argv[i]);
-				struct dir_t *p = dir_getdir(current, dn);
-				if(p){
-					struct dir_t *c = dir_new(bn);
-					dir_addchild(p, c);
-				}else{
-					fprintf(stderr, "%s: %s: No such file or directory\n", argv[0], argv[i]);
-				}
-			}
-		}
-	}
-}
+struct bgtask_t *tasks = NULL;
 
 /* exit the shell */
 static void myexit(int argc, char *argv[]){
 	exit(0);
 }
 
-/* Compare pointers to strings. Used as callback to qsort */
-static int mycmp(const void *a, const void *b){
-	return strcmp(*((char **)a), *((char **)b));
-}
-
-/* List a directory*/
-static void ls(int argc, char *argv[]){
-	struct dir_t *dir;
-	dir = current; /* default to current directory*/
-	if(argc == 2){
-		/* a path has been supplied */
-		dir = dir_getdir(dir, argv[1]);
-		if(!dir){
-			fprintf(stderr, "%s: %s: No such file directory\n", argv[0], argv[1]);
-			return;
-		}
-	}
-	int size = 0;
-	const char *children[128];
-	dir = dir->child;
-	while(dir){
-		children[size++] = dir->name;
-		dir = dir->next;
-	}
-	/* Sort children by filename */
-	qsort(children, size, sizeof (char *), mycmp);
-
-	/* Print children */
-	int i;
-	for(i = 0 ; i < size; i++){
-		printf("%s\n", children[i]);
-	}
-}
-
 /* change directory */
 static void cd(int argc, char *argv[]){
+  int r = 0;
 	if(argc == 1){
-		/* cd with no arguments should change to home directory. We'll just change to the root */
-		current = root;
+    /* cd with no arguments should change to home directory. We'll just change to the root */
+    r = chdir(getenv("HOME"));
 	}else if(argc == 2){
-		struct dir_t *dir = dir_getdir(current, argv[1]);
-		if(!dir){
-			fprintf(stderr, "%s: %s: No such file directory\n", argv[0], argv[1]);
-		}else{
-			current = dir;
-		}
+    if(!strcmp("~", argv[1])){
+      r = chdir(getenv("HOME"));
+    }else{
+      r = chdir(argv[1]);
+    }
 	}else{
 		fprintf(stderr, "%s: too many arguments\n", argv[0]);
+    return;
 	}
+  if(r == -1){
+    perror("cd");
+  }
 }
 
-/* Deletes a directory. Accepts multiple arguments to be deleted. */
-static void rmdir(int argc, char *argv[]){
-	if(argc < 2){
-		fprintf(stderr, "%s: missing operand\n", argv[0]);
-	}else{
-		int i;
-		for(i = 1; i < argc; i++){
-			struct dir_t *dir = dir_getdir(current, argv[i]);
-			if(!dir){
-				fprintf(stderr, "%s: %s: No such file directory\n", argv[0], argv[i]);
-			}else{
-				dir_rmdir(dir);
-			}
-		}
-	}
+#include <signal.h>
+
+static void bgstop(int argc, char *argv[]){
+    if(argc != 2){
+        fprintf(stderr, "USAGE: %s PID\n", argv[0]);
+        return;
+    }
+    int pid = atoi(argv[0]);
+    kill(pid, SIGKILL);
+}
+
+static void bglist(int argc, char *argv[]){
+  struct bgtask_t *tmp;
+  for(tmp = tasks; tmp; tmp = tmp->next){
+    printf("%i:\t%s\n", tmp->pid, tmp->name);
+  }
+}
+
+static void bg(int argc, char *argv[]){
+  /* Double fork construct. Allows us to wait on the status of the background task */
+  int pid = fork();
+  if(!pid){
+    int pid2 = fork();
+    if(!pid2){
+        execvp(argv[1], &argv[1]);
+        printf("error executing %s\n", argv[0]);
+        exit(1);
+    }else{
+        waitpid(pid2, NULL, 0);
+        printf("rsi: '%s' (pid %i) has exit\n", argv[1], pid2);
+        exit(0);
+    }
+  }else{
+    struct bgtask_t *tmp = malloc(sizeof(struct bgtask_t));
+    tmp->name = strdup(argv[1]);
+    tmp->pid = pid;
+    tmp->next = tasks;
+    tasks = tmp;
+  }
 }
 
 /*
@@ -134,11 +88,11 @@ static void rmdir(int argc, char *argv[]){
  * There is a string specifying the name and a function pointer to the method.
  */
 struct executable execs[] = {
-	{"mkdir", mkdir},
-	{"exit", myexit},
-	{"ls", ls},
 	{"cd", cd},
-	{"rmdir", rmdir},
+	{"bg", bg},
+	{"bgstop", bgstop},
+	{"bglist", bglist},
+	{"exit", myexit},
 	{NULL, NULL}
 };
 

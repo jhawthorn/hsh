@@ -1,10 +1,10 @@
 
 CFLAGS += -ggdb -Wall
-OBJECTS := ssi.o commands.o dir.o
+OBJECTS := rsi.o commands.o
 
 ssi: $(OBJECTS)
-	gcc -o ssi $(OBJECTS)
+	gcc -o rsi $(OBJECTS)
 
 clean:
-	$(RM) *.o
+	$(RM) *.o rsi
 

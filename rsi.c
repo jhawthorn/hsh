@@ -1,11 +1,15 @@
 
+#define _GNU_SOURCE
+
+#include <unistd.h>
+#include <sys/wait.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
 #define CMD_MAX_LENGTH 4096
 
-#include "dir.h"
 #include "commands.h"
 
 /* myexec - execute a command. 
@@ -20,6 +24,7 @@ void myexec(char *buf){
 		argv[argc++] = strdup(pch);
 		pch = strtok(NULL, " \t\n");
 	}
+  argv[argc] = NULL;
 	if(argc){
 		for(i = 0; execs[i].name; i++){
 			if(!strcmp(execs[i].name, argv[0])){
@@ -27,7 +32,14 @@ void myexec(char *buf){
 				return;
 			}
 		}
-		fprintf(stderr, "%s: command not found\n", argv[0]);
+    int pid = fork();
+    if(pid){
+        waitpid(pid, NULL, 0);
+    }else{
+        execvp(argv[0], argv);
+        printf("error executing %s\n", argv[0]);
+        exit(1);
+    }
 	}
 }
 
@@ -37,23 +49,21 @@ void myexec(char *buf){
 void run(){
 	char buf[CMD_MAX_LENGTH];
 	for(;;){
-		printf("SSI: ");
-		dir_pwd(current);
-		printf(" > ");
+		printf("SSI: %s > ", get_current_dir_name());
 		fflush(stdout);
 		char *line = fgets(buf, CMD_MAX_LENGTH - 1, stdin);
 
 		/* Check for EOF */
-		if(!line)
+		if(!line){
+      printf("\n");
 			return;
+    }
 
 		myexec(buf);
 	}
 }
 
 int main(int argc, char *argv[]){
-	current = root = dir_new("");
-	root->parent = root;
 	run();
 	return 0;
 }

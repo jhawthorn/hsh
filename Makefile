@@ -1,10 +1,15 @@
 
 CFLAGS += -ggdb -Wall
 OBJECTS := rsi.o commands.o
+TARGET=rsi
 
-ssi: $(OBJECTS)
-	gcc -o rsi $(OBJECTS)
+$(TARGET): $(OBJECTS)
+	gcc -o $(TARGET) $(OBJECTS)
+
+fmt:
+	clang-format -i *.c *.h
 
 clean:
-	$(RM) *.o rsi
+	$(RM) *.o $(TARGET)
 
+.PHONY: fmt clean

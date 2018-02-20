@@ -17,12 +17,12 @@ struct bgtask_t {
 struct bgtask_t *tasks = NULL;
 
 /* exit the shell */
-static void myexit(int argc, char *argv[]) {
+static void hsh_exit(int argc, char *argv[]) {
 	exit(0);
 }
 
 /* change directory */
-static void cd(int argc, char *argv[]) {
+static void hsh_cd(int argc, char *argv[]) {
 	int r = 0;
 	if (argc == 1) {
 		/* cd with no arguments should change to home directory. We'll just change to the
@@ -45,7 +45,7 @@ static void cd(int argc, char *argv[]) {
 
 #include <signal.h>
 
-static void bgstop(int argc, char *argv[]) {
+static void hsh_bgstop(int argc, char *argv[]) {
 	if (argc != 2) {
 		fprintf(stderr, "USAGE: %s PID\n", argv[0]);
 		return;
@@ -54,14 +54,14 @@ static void bgstop(int argc, char *argv[]) {
 	kill(pid, SIGKILL);
 }
 
-static void bglist(int argc, char *argv[]) {
+static void hsh_bglist(int argc, char *argv[]) {
 	struct bgtask_t *tmp;
 	for (tmp = tasks; tmp; tmp = tmp->next) {
 		printf("%i:\t%s\n", tmp->pid, tmp->name);
 	}
 }
 
-static void bg(int argc, char *argv[]) {
+static void hsh_bg(int argc, char *argv[]) {
 	/* Double fork construct. Allows us to wait on the status of the background task */
 	int pid = fork();
 	if (!pid) {
@@ -88,5 +88,5 @@ static void bg(int argc, char *argv[]) {
  * This structure holds the commands the shell supports.
  * There is a string specifying the name and a function pointer to the method.
  */
-struct executable execs[] = {{"cd", cd},	 {"bg", bg},       {"bgstop", bgstop},
-			     {"bglist", bglist}, {"exit", myexit}, {NULL, NULL}};
+struct executable execs[] = {{"cd", hsh_cd},	 {"bg", hsh_bg},       {"bgstop", hsh_bgstop},
+			     {"bglist", hsh_bglist}, {"exit", hsh_exit}, {NULL, NULL}};

@@ -1,7 +1,7 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H COMMANDS_H
 
-struct executable{
+struct executable {
 	const char *name;
 	void (*e)(int argc, char *argv[]);
 };
@@ -9,4 +9,3 @@ struct executable{
 extern struct executable execs[];
 
 #endif
-

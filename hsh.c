@@ -12,11 +12,11 @@
 
 #include "commands.h"
 
-/* myexec - execute a command.
- * myexec is a lot like exec(). It takes a string, tokenizes it into argv, and then runs the
+/* hsh_exec - execute a command.
+ * hsh_exec is a lot like exec(). It takes a string, tokenizes it into argv, and then runs the
  * associated command.
  */
-void myexec(char *buf) {
+void hsh_exec(char *buf) {
 	int i;
 	int argc = 0;
 	char *argv[32];
@@ -60,7 +60,7 @@ void run() {
 			return;
 		}
 
-		myexec(buf);
+		hsh_exec(buf);
 	}
 }
 

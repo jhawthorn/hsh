@@ -10,6 +10,8 @@
 
 #define CMD_MAX_LENGTH 4096
 
+#define PROMPT "\n%s\n$ "
+
 #include "commands.h"
 
 /* hsh_exec - execute a command.
@@ -50,7 +52,7 @@ void hsh_exec(char *buf) {
 void run() {
 	char buf[CMD_MAX_LENGTH];
 	for (;;) {
-		printf("HSH: %s > ", get_current_dir_name());
+		printf(PROMPT, get_current_dir_name());
 		fflush(stdout);
 		char *line = fgets(buf, CMD_MAX_LENGTH - 1, stdin);
 

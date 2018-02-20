@@ -1,7 +1,7 @@
 
 CFLAGS += -ggdb -Wall
-OBJECTS := rsi.o commands.o
-TARGET=rsi
+OBJECTS := hsh.o commands.o
+TARGET=hsh
 
 $(TARGET): $(OBJECTS)
 	gcc -o $(TARGET) $(OBJECTS)

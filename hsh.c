@@ -50,7 +50,7 @@ void myexec(char *buf) {
 void run() {
 	char buf[CMD_MAX_LENGTH];
 	for (;;) {
-		printf("SSI: %s > ", get_current_dir_name());
+		printf("HSH: %s > ", get_current_dir_name());
 		fflush(stdout);
 		char *line = fgets(buf, CMD_MAX_LENGTH - 1, stdin);
 

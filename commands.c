@@ -72,7 +72,7 @@ static void bg(int argc, char *argv[]) {
 			exit(1);
 		} else {
 			waitpid(pid2, NULL, 0);
-			printf("rsi: '%s' (pid %i) has exit\n", argv[1], pid2);
+			printf("hsh: '%s' (pid %i) has exit\n", argv[1], pid2);
 			exit(0);
 		}
 	} else {
